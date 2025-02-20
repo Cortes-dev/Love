@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import './Carrusel.css'; // Asegúrate de tener las transiciones aquí
+import './Carrusel.css';
 
 const Carrusel = () => {
     const [currentIndex, setCurrentIndex] = useState(0);
