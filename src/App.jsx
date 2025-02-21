@@ -1,10 +1,31 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import Carrusel from './assets/components/Carrusel';
 import TextLove from './assets/components/TextLove';
 
 function App() {
-  const [view, setView] = useState(false);
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    const playAudio = () => {
+      if (audioRef.current) {
+        audioRef.current.play().catch(error => console.log("Autoplay bloqueado:", error));
+      }
+      
+    };
+
+    // Espera la interacción del usuario antes de reproducir
+    const handleUserInteraction = () => {
+      playAudio();
+      document.removeEventListener("click", handleUserInteraction);
+    };
+
+    document.addEventListener("click", handleUserInteraction);
+
+    return () => {
+      document.removeEventListener("click", handleUserInteraction);
+    };
+  }, []);
 
   return (
     <>
@@ -30,14 +51,17 @@ function App() {
           <TextLove />
         </div>
 
-
-
         {/* Detalles decorativos (corazones) */}
         <div className="fixed bottom-5 right-5 text-4xl">
           <span className="text-[#CABBE9]">💜</span>
           <span className="text-[#F9E0F9]">💖</span>
         </div>
-      </main >
+      </main>
+
+      {/* Reproductor de audio oculto */}
+      <audio ref={audioRef} loop>
+        <source src="/musica.mp3" type="audio/mpeg" />
+      </audio>
     </>
   );
 }
