@@ -1,77 +1,91 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './Carrusel.css';
 
-const images = ['/001.jpg', '/1.jpg', '/2.jpg', '/3.jpg', '/4.jpg', '/5.jpg', '/new1.jpg', '/new2.jpg', '/new3.jpg'];
-const videoUrl = '/vid001.mp4';
+const images = [
+    '/001.jpg',
+    '/1.jpg',
+    '/2.jpg',
+    '/3.jpg',
+    '/4.jpg',
+    '/5.jpg',
+    '/new1.jpg',
+    '/new2.jpg',
+    '/new3.jpg',
+    '/vid001.mp4' // El video debe estar al final del array
+];
 
 const Carrusel = () => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(false);
-    const [startX, setStartX] = useState(0);
-    const [isDragging, setIsDragging] = useState(false);
+    const [direction, setDirection] = useState('');
     const intervalRef = useRef(null);
+    const videoRef = useRef(null);
 
-    const isVideoPlaying = currentIndex === images.length;
+    const isVideoPlaying = images[currentIndex].endsWith('.mp4');
 
+    // Función para cambiar de slide
     const changeSlide = useCallback((direction) => {
+        setDirection(direction > 0 ? 'right' : 'left');
         setIsTransitioning(true);
-        setTimeout(() => {
-            setCurrentIndex((prevIndex) => {
-                const newIndex = prevIndex + direction;
-                return Math.max(0, Math.min(newIndex, images.length));
-            });
-            setIsTransitioning(false);
-        }, 0);
+        setCurrentIndex((prevIndex) => {
+            let newIndex = prevIndex + direction;
+            if (newIndex >= images.length) newIndex = 0; // Vuelve al inicio si llega al final
+            if (newIndex < 0) newIndex = images.length - 1; // Vuelve al final si llega al inicio
+            return newIndex;
+        });
+        setTimeout(() => setIsTransitioning(false), 300); // Duración de la transición
     }, []);
 
-    useEffect(() => {
-        if (isVideoPlaying) return;
-
-        intervalRef.current = setInterval(() => changeSlide(1), 3000);
-        return () => clearInterval(intervalRef.current);
+    // Función para iniciar el intervalo automático
+    const startInterval = useCallback(() => {
+        if (isVideoPlaying) return; // No inicia el intervalo si es un video
+        intervalRef.current = setInterval(() => changeSlide(1), 5000); // Cambia cada 5 segundos
     }, [changeSlide, isVideoPlaying]);
 
-
-    useEffect(() => {
-        if (currentIndex === images.length) {
-            setCurrentIndex(0);
-        }
-    }, [currentIndex]);
-
-    const handleTouchStart = (e) => {
-        setStartX(e.touches[0].clientX);
-        setIsDragging(true);
-    };
-
-    const handleTouchEnd = () => {
-        setIsDragging(false);
-        console.log('touch end');
-    };
-
-    // Cancelacion de riel automatico
-    useEffect(() => {
-        return () => {
-            handleTouchEnd();
-        };
+    // Función para pausar el intervalo
+    const pauseInterval = useCallback(() => {
+        clearInterval(intervalRef.current);
     }, []);
 
+    // Efecto para manejar el intervalo automático
+    useEffect(() => {
+        startInterval();
+        return () => clearInterval(intervalRef.current); // Limpia el intervalo al desmontar
+    }, [startInterval]);
 
-
-    const handleTouchMove = (e) => {
-        if (!isDragging) return;
-        const diffX = startX - e.touches[0].clientX;
-        if (Math.abs(diffX) > 0) {
-            changeSlide(diffX > 0 ? 1 : -1);
-            setIsDragging(false);
+    // Efecto para manejar el video
+    useEffect(() => {
+        if (isVideoPlaying && videoRef.current) {
+            videoRef.current.play(); // Reproduce el video automáticamente
+            videoRef.current.onended = () => {
+                changeSlide(1); // Cambia al siguiente slide cuando el video termina
+            };
         }
+    }, [isVideoPlaying, changeSlide]);
+
+    // Manejo de eventos táctiles para deslizar
+    const handleTouchStart = (e) => {
+        const startX = e.touches[0].clientX;
+        const handleTouchMove = (e) => {
+            const diffX = startX - e.touches[0].clientX;
+            if (Math.abs(diffX) > 50) { // Sensibilidad al deslizar
+                changeSlide(diffX > 0 ? 1 : -1);
+                document.removeEventListener('touchmove', handleTouchMove);
+            }
+        };
+        document.addEventListener('touchmove', handleTouchMove);
+        document.addEventListener('touchend', () => {
+            document.removeEventListener('touchmove', handleTouchMove);
+        }, { once: true });
+        pauseInterval();
     };
 
     return (
         <div
             className="relative w-full h-96 md:h-96 lg:h-112 shadow-lg overflow-hidden rounded-t-md"
             onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={() => setIsDragging(false)}
+            role="region"
+            aria-label="Carrusel de imágenes"
         >
             <div className="absolute inset-0 bg-gradient-to-b from-[#FCE4EC] to-[#F9E0F9] z-0"></div>
             <div className="absolute inset-0 flex items-center justify-center z-10 opacity-40">
@@ -80,24 +94,42 @@ const Carrusel = () => {
 
             <div className="absolute inset-0 z-20">
                 {isVideoPlaying ? (
-                    <video className="w-full h-full object-cover rounded-t-md" autoPlay loop muted>
-                        <source src={videoUrl} type="video/mp4" />
+                    <video
+                        ref={videoRef}
+                        className="w-full h-full object-cover rounded-t-md"
+                        autoPlay
+                        muted
+                        aria-label="Video en reproducción"
+                    >
+                        <source src={images[currentIndex]} type="video/mp4" />
                         Tu navegador no soporta la etiqueta de video.
                     </video>
                 ) : (
                     <>
-                        <div className={`carousel-image-container ${isTransitioning ? 'fade-out' : 'fade-in'}`}>
+                        <div className={`carousel-image-container ${isTransitioning ? `slide-out-${direction}` : 'slide-in'}`}>
                             <img src={images[currentIndex]} alt={`Imagen ${currentIndex + 1}`} className="w-full h-full object-cover rounded-t-md" />
                         </div>
-                        <button className="absolute top-1/2 left-4 transform -translate-y-1/2 bg-[#CABBE9] text-[#4A154B] p-2 rounded-full shadow-lg hover:bg-[#4A154B] hover:text-[#CABBE9] transition-all duration-300" onClick={() => changeSlide(-1)}>
+                        <button
+                            className="absolute top-1/2 left-4 transform -translate-y-1/2 bg-[#CABBE9] text-[#4A154B] p-2 rounded-full shadow-lg hover:bg-[#4A154B] hover:text-[#CABBE9] transition-all duration-300"
+                            onClick={() => { changeSlide(-1); pauseInterval(); }}
+                            aria-label="Anterior"
+                        >
                             &#10094;
                         </button>
-                        <button className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-[#CABBE9] text-[#4A154B] p-2 rounded-full shadow-lg hover:bg-[#4A154B] hover:text-[#CABBE9] transition-all duration-300" onClick={() => changeSlide(1)}>
+                        <button
+                            className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-[#CABBE9] text-[#4A154B] p-2 rounded-full shadow-lg hover:bg-[#4A154B] hover:text-[#CABBE9] transition-all duration-300"
+                            onClick={() => { changeSlide(1); pauseInterval(); }}
+                            aria-label="Siguiente"
+                        >
                             &#10095;
                         </button>
                         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
                             {images.map((_, index) => (
-                                <div key={index} className={`w-3 h-3 rounded-full border transition-all duration-300 ${index === currentIndex ? 'bg-[#CABBE9] border-[#4A154B]' : 'bg-transparent border-[#4A154B]'}`}></div>
+                                <div
+                                    key={index}
+                                    className={`w-3 h-3 rounded-full border transition-all duration-300 ${index === currentIndex ? 'bg-[#CABBE9] border-[#4A154B]' : 'bg-transparent border-[#4A154B]'}`}
+                                    aria-label={`Indicador de diapositiva ${index + 1}`}
+                                ></div>
                             ))}
                         </div>
                     </>
