@@ -6,37 +6,23 @@ import musica from '../public/musica.mp3';
 
 function App() {
   const audioRef = useRef(null);
-  const [progress, setProgress] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  useEffect(() => {
+  const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
-
-    const playAudio = () => {
+    
+    if (isPlaying) {
+      audio.pause();
+    } else {
       audio.play()
         .then(() => {
-          audio.muted = false; // Asegurar que el audio se desmutea
+          audio.muted = false;
         })
         .catch(error => console.log("Autoplay bloqueado:", error));
-    };
-
-    const updateProgress = () => {
-      setProgress((audio.currentTime / audio.duration) * 100);
-    };
-
-    audio.addEventListener('timeupdate', updateProgress);
-
-    // Intenta reproducir con un pequeño retraso para evitar bloqueos
-    setTimeout(playAudio, 1000);
-
-    // En caso de bloqueo, agregar evento de interacción para activarlo
-    document.addEventListener('click', playAudio, { once: true });
-
-    return () => {
-      document.removeEventListener('click', playAudio);
-      audio.removeEventListener('timeupdate', updateProgress);
-    };
-  }, []);
+    }
+    setIsPlaying(!isPlaying);
+  };
 
   return (
     <>
@@ -63,15 +49,15 @@ function App() {
         </div>
       </main>
 
-      {/* Barra de progreso del audio */}
-      <div className="fixed bottom-0 left-0 w-full h-2 bg-gray-300">
-        <div
-          className="h-full bg-[#6A1B9A] transition-all"
-          style={{ width: `${progress}%` }}
-        ></div>
-      </div>
+      {/* Botón de inicio de música */}
+      <button 
+        className="fixed bottom-5 left-5 bg-[#6A1B9A] text-white px-4 py-2 rounded-full shadow-lg" 
+        onClick={togglePlay}
+      >
+        {isPlaying ? '⏸️' : '▶️'}
+      </button>
 
-      <audio autoPlay loop controls={false} ref={audioRef}>
+      <audio loop controls={false} ref={audioRef}>
         <source src={musica} type="audio/mp3" />
       </audio>
     </>
