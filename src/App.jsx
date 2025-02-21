@@ -36,8 +36,8 @@ function App() {
             21/02/2025
           </span>
 
-          <h1 className="text-6xl font-extrabold text-[#6A1B9A] text-center py-8 animate-pulse drop-shadow-lg">
-            Nuestro Romance 💜
+          <h1 className="text-4xl font-extrabold text-[#6A1B9A] text-center py-8 animate-pulse drop-shadow-lg">
+          💜 Amor 💜
           </h1>
 
           <TextLove />
