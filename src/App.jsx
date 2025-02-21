@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import './App.css';
 import Carrusel from './assets/components/Carrusel';
 import TextLove from './assets/components/TextLove';
@@ -7,24 +7,20 @@ function App() {
   const audioRef = useRef(null);
 
   useEffect(() => {
-    const playAudio = () => {
-      if (audioRef.current) {
-        audioRef.current.play().catch(error => console.log("Autoplay bloqueado:", error));
-      }
-      
-    };
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    // Espera la interacción del usuario antes de reproducir
-    const handleUserInteraction = () => {
-      playAudio();
-      document.removeEventListener("click", handleUserInteraction);
-    };
+    // Iniciar el audio en mute (para que iOS lo permita)
+    audio.muted = true;
+    audio.play()
+      .then(() => {
+        // Desmutear después de que el audio haya comenzado
+        setTimeout(() => {
+          audio.muted = false;
+        }, 500);
+      })
+      .catch(error => console.log("Autoplay bloqueado:", error));
 
-    document.addEventListener("click", handleUserInteraction);
-
-    return () => {
-      document.removeEventListener("click", handleUserInteraction);
-    };
   }, []);
 
   return (
